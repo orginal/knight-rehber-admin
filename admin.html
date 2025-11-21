@@ -288,6 +288,27 @@
             color: #FF6B6B;
         }
 
+        .security-info {
+            background: rgba(255, 214, 107, 0.1);
+            border: 1px solid #FFD66B;
+            color: #FFD66B;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.8em;
+        }
+
+        .debug-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid #3B82F6;
+            color: #3B82F6;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 0.8em;
+            text-align: left;
+        }
+
         @media (max-width: 768px) {
             .tabs {
                 flex-direction: column;
@@ -313,19 +334,30 @@
             <div id="loginAlert" class="alert" style="display: none;"></div>
 
             <div class="form-group">
-                <input type="text" id="username" class="form-control" placeholder="Kullanıcı Adı" value="admin">
+                <input type="text" id="username" class="form-control" placeholder="Kullanıcı Adı" autocomplete="off" value="Aga">
             </div>
 
             <div class="form-group">
-                <input type="password" id="password" class="form-control" placeholder="Şifre" value="knight123">
+                <input type="password" id="password" class="form-control" placeholder="Şifre" autocomplete="new-password" value="2312631">
             </div>
 
             <button class="btn" onclick="login()" style="width: 100%; justify-content: center;">
                 🔐 Giriş Yap
             </button>
 
-            <div style="margin-top: 20px; color: #6B7280; font-size: 0.9em;">
-                Varsayılan: admin / knight123
+            <div class="security-info">
+                🔐 Kullanıcı: Aga<br>
+                🔑 Şifre: 2312631<br>
+                🌐 API: https://knightrehber-api.onrender.com
+            </div>
+
+            <div class="debug-info">
+                <strong>API Endpoint'leri:</strong><br>
+                • Giriş: /api/admin/login<br>
+                • Bildirim: /api/admin/send-notification<br>
+                • Güncelleme: /api/admin/add-update<br>
+                • Fotoğraf: /api/admin/add-photo<br>
+                • İstatistik: /api/admin/stats
             </div>
         </div>
 
@@ -335,6 +367,9 @@
                 <div class="header">
                     <h1>🏰 Knight Rehber Admin Paneli</h1>
                     <p>Uygulama yönetim merkezi - Toplam Kullanıcı: <span id="totalUsers">0</span></p>
+                    <button class="btn btn-danger" onclick="logout()" style="margin-top: 15px;">
+                        🚪 Çıkış Yap
+                    </button>
                 </div>
 
                 <div class="stats">
@@ -490,23 +525,18 @@
     </div>
 
     <script>
-        // API Base URL - Vercel otomatik olarak ayarlayacak
-        const API_BASE_URL = window.location.origin + '/api';
+        // API Base URL - Render URL'niz
+        const API_BASE_URL = 'https://knightrehber-api.onrender.com/api';
         let authToken = '';
 
         // Tab geçiş fonksiyonu
         function switchTab(tabName) {
-            // Tüm tab içeriklerini gizle
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
-
-            // Tüm tab butonlarını pasif yap
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-
-            // Seçilen tab'ı aktif yap
             document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
         }
@@ -517,16 +547,30 @@
             alert.textContent = message;
             alert.className = `alert alert-${type}`;
             alert.style.display = 'block';
-
             setTimeout(() => {
                 alert.style.display = 'none';
             }, 5000);
+        }
+
+        // Çıkış yap
+        function logout() {
+            if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+                authToken = '';
+                document.getElementById('mainPanel').style.display = 'none';
+                document.getElementById('loginScreen').style.display = 'block';
+                showAlert('loginAlert', '✅ Güvenli çıkış yapıldı', 'success');
+            }
         }
 
         // Giriş yap
         async function login() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                showAlert('loginAlert', 'Lütfen kullanıcı adı ve şifre girin!', 'error');
+                return;
+            }
 
             try {
                 const response = await fetch(API_BASE_URL + '/admin/login', {
@@ -545,12 +589,21 @@
                     document.getElementById('mainPanel').style.display = 'block';
                     loadAppStats();
                     loadNotifications();
+                    showAlert('loginAlert', '✅ Giriş başarılı!', 'success');
                 } else {
-                    showAlert('loginAlert', data.error, 'error');
+                    showAlert('loginAlert', data.error || '❌ Giriş başarısız!', 'error');
                 }
             } catch (error) {
-                showAlert('loginAlert', 'Giriş hatası: ' + error.message, 'error');
+                showAlert('loginAlert', '❌ Bağlantı hatası: ' + error.message, 'error');
             }
+        }
+
+        // Auth header
+        function getAuthHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            };
         }
 
         // Bildirim gönderme
@@ -567,22 +620,25 @@
             try {
                 const response = await fetch(API_BASE_URL + '/admin/send-notification', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ title, message, target })
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        title,
+                        message,
+                        target,
+                        type: 'push_notification'
+                    })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    showAlert('notificationAlert', '✅ Bildirim başarıyla gönderildi!', 'success');
+                    showAlert('notificationAlert', '✅ ' + data.message, 'success');
                     document.getElementById('notificationTitle').value = '';
                     document.getElementById('notificationMessage').value = '';
                     loadAppStats();
                     loadNotifications();
                 } else {
-                    showAlert('notificationAlert', '❌ ' + data.error, 'error');
+                    showAlert('notificationAlert', '❌ ' + (data.error || 'Bildirim gönderilemedi'), 'error');
                 }
             } catch (error) {
                 showAlert('notificationAlert', '❌ Hata: ' + error.message, 'error');
@@ -603,16 +659,18 @@
             try {
                 const response = await fetch(API_BASE_URL + '/admin/add-update', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ title, content, importance })
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        title,
+                        content,
+                        importance
+                    })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    showAlert('updateAlert', '✅ Güncelleme notu eklendi!', 'success');
+                    showAlert('updateAlert', '✅ ' + data.message, 'success');
                     document.getElementById('updateTitle').value = '';
                     document.getElementById('updateContent').value = '';
                 } else {
@@ -636,16 +694,17 @@
             try {
                 const response = await fetch(API_BASE_URL + '/admin/add-photo', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ title, url })
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        title,
+                        url
+                    })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    showAlert('photoAlert', '✅ Fotoğraf eklendi!', 'success');
+                    showAlert('photoAlert', '✅ ' + data.message, 'success');
                     document.getElementById('photoTitle').value = '';
                     document.getElementById('photoUrl').value = '';
                 } else {
@@ -664,16 +723,14 @@
             try {
                 const response = await fetch(API_BASE_URL + '/admin/app-status', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ status: mode, maintenanceMessage: message })
                 });
 
                 const data = await response.json();
 
                 if (data.success) {
-                    showAlert('appAlert', '✅ Uygulama durumu güncellendi!', 'success');
+                    showAlert('appAlert', '✅ ' + data.message, 'success');
                     loadAppStats();
                 }
             } catch (error) {
@@ -686,25 +743,39 @@
             const minVersion = document.getElementById('minVersion').value;
             const forceUpdateMessage = document.getElementById('forceUpdateMessage').value;
 
-            // Bu örnekte basit bir uyarı gösteriyoruz
-            showAlert('appAlert', '✅ Versiyon ayarları kaydedildi! (Örnek)', 'success');
+            try {
+                const response = await fetch(API_BASE_URL + '/admin/version-settings', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ minVersion, forceUpdateMessage })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert('appAlert', '✅ ' + data.message, 'success');
+                }
+            } catch (error) {
+                showAlert('appAlert', '❌ Hata: ' + error.message, 'error');
+            }
         }
 
         // Bildirimleri yükleme
         async function loadNotifications() {
             try {
-                const response = await fetch(API_BASE_URL + '/admin/notifications');
-                const notifications = await response.json();
+                const response = await fetch(API_BASE_URL + '/admin/notifications', {
+                    headers: getAuthHeaders()
+                });
 
+                const notifications = await response.json();
                 const list = document.getElementById('notificationList');
 
-                if (notifications.length === 0) {
+                if (!notifications || notifications.length === 0) {
                     list.innerHTML = '<div style="text-align: center; color: #8E97A8; padding: 20px;">Henüz bildirim gönderilmedi</div>';
                     return;
                 }
 
                 list.innerHTML = '';
-
                 notifications.forEach(notification => {
                     const item = document.createElement('div');
                     item.className = 'notification-item';
@@ -726,15 +797,17 @@
         // Uygulama istatistiklerini yükleme
         async function loadAppStats() {
             try {
-                const response = await fetch(API_BASE_URL + '/admin/stats');
+                const response = await fetch(API_BASE_URL + '/admin/stats', {
+                    headers: getAuthHeaders()
+                });
+
                 const stats = await response.json();
 
-                document.getElementById('totalUsers').textContent = stats.totalUsers;
-                document.getElementById('activeUsers').textContent = stats.activeUsers;
-                document.getElementById('sentNotifications').textContent = stats.sentNotifications;
-                document.getElementById('appVersion').textContent = stats.appVersion;
+                document.getElementById('totalUsers').textContent = stats.totalUsers || 0;
+                document.getElementById('activeUsers').textContent = stats.activeUsers || 0;
+                document.getElementById('sentNotifications').textContent = stats.sentNotifications || 0;
+                document.getElementById('appVersion').textContent = stats.appVersion || '1.0.0';
 
-                // Uygulama durumunu güncelle
                 const statusElement = document.getElementById('appStatus');
                 statusElement.innerHTML = '';
 

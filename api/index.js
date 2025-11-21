@@ -1,16 +1,23 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '..')));
 
-// Basit veritabanı (gerçek projede database kullanın)
+// Basit veritabanı (Fallback)
 let database = {
   users: [
-    { id: 'guest_123', username: 'Misafir', lastActive: new Date().toISOString() }
+    {
+      id: 'guest_123',
+      username: 'Misafir',
+      lastActive: new Date().toISOString(),
+      pushToken: null
+    }
   ],
   notifications: [],
   updateNotes: [
@@ -19,14 +26,16 @@ let database = {
       title: 'Hoş Geldiniz!',
       content: 'Knight Rehber uygulamasına hoş geldiniz. Yeni özellikler yakında eklenecek.',
       importance: 'normal',
-      date: '19.11.2024'
+      date: new Date().toLocaleDateString('tr-TR'),
+      created_at: new Date().toISOString()
     }
   ],
   nostaljiPhotos: [
     {
       id: 'k1',
-      title: 'Eski Knight Online 1',
-      image_url: '/ko1.jpg'
+      title: 'Eski Knight Online',
+      image_url: 'https://via.placeholder.com/300x200/FFD66B/0B0B0B?text=Knight+Rehber',
+      created_at: new Date().toISOString()
     }
   ],
   appSettings: {
@@ -36,27 +45,58 @@ let database = {
   }
 };
 
-// 🔐 ADMIN GİRİŞ
+// Mock Push Notification fonksiyonu
+async function sendPushNotification(pushToken, title, message) {
+  try {
+    console.log(`📤 Mock Push Notification: ${title} - ${message}`);
+    console.log(`Token: ${pushToken}`);
+
+    // Burada gerçek Expo, FCM vs. entegre edilebilir
+    return true;
+  } catch (error) {
+    console.error('❌ Push notification hatası:', error);
+    return false;
+  }
+}
+
+// ROUTES
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Knight Rehber API Çalışıyor 🏰',
+    version: '1.0.0',
+    endpoints: {
+      admin: '/admin',
+      api: '/api'
+    }
+  });
+});
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '../admin.html'));
+});
+
+// Admin giriş (Fallback)
 app.post('/api/admin/login', (req, res) => {
   const { username, password } = req.body;
 
-  // Basit auth - production'da daha güvenli yapın
-  const adminUsername = 'admin';
-  const adminPassword = 'knight123'; // Bunu sonradan değiştirin!
+  const adminUsername = 'Aga';
+  const adminPassword = '2312631';
 
   if (username === adminUsername && password === adminPassword) {
     res.json({
       success: true,
       token: 'admin-token-2024',
-      user: { username: adminUsername }
+      user: { username: adminUsername, role: 'admin' }
     });
   } else {
     res.status(401).json({ error: 'Geçersiz kullanıcı adı veya şifre' });
   }
 });
 
-// 📊 İSTATİSTİKLER
+// İstatistikler (Fallback)
 app.get('/api/admin/stats', (req, res) => {
+  const usersWithToken = database.users.filter(u => u.pushToken).length;
+
   res.json({
     totalUsers: database.users.length,
     activeUsers: database.users.filter(u => {
@@ -65,40 +105,47 @@ app.get('/api/admin/stats', (req, res) => {
       return lastActive > sevenDaysAgo;
     }).length,
     sentNotifications: database.notifications.length,
+    usersWithPushToken: usersWithToken,
     appVersion: '1.0.0',
     appStatus: database.appSettings.app_status
   });
 });
 
-// 📢 BİLDİRİM GÖNDER
-app.post('/api/admin/send-notification', (req, res) => {
+// Bildirim gönder (Fallback)
+app.post('/api/admin/send-notification', async (req, res) => {
   const { title, message, target } = req.body;
 
   if (!title || !message) {
     return res.status(400).json({ error: 'Başlık ve mesaj gerekli' });
   }
 
-  const newNotification = {
-    id: Date.now(),
-    title,
-    message,
-    target: target || 'all',
-    sent_count: database.users.length,
-    created_at: new Date().toISOString()
-  };
+  try {
+    const newNotification = {
+      id: Date.now(),
+      title,
+      message,
+      target: target || 'all',
+      sent_count: database.users.filter(u => u.pushToken).length,
+      total_users: database.users.length,
+      failed_count: 0,
+      created_at: new Date().toISOString()
+    };
 
-  database.notifications.unshift(newNotification);
+    database.notifications.unshift(newNotification);
 
-  console.log(`📢 Bildirim gönderildi: "${title}" - ${database.users.length} kullanıcıya`);
+    res.json({
+      success: true,
+      message: `Bildirim başarıyla gönderildi!`,
+      notification: newNotification
+    });
 
-  res.json({
-    success: true,
-    message: 'Bildirim başarıyla gönderildi',
-    notification: newNotification
-  });
+  } catch (error) {
+    console.error('Bildirim gönderme hatası:', error);
+    res.status(500).json({ error: 'Bildirim gönderilirken hata oluştu' });
+  }
 });
 
-// 📝 GÜNCELLEME NOTU EKLE
+// Güncelleme notu ekle (Fallback)
 app.post('/api/admin/add-update', (req, res) => {
   const { title, content, importance } = req.body;
 
@@ -124,7 +171,7 @@ app.post('/api/admin/add-update', (req, res) => {
   });
 });
 
-// 🖼️ NOSTALJİ FOTOĞRAFI EKLE
+// Nostalji fotoğrafı ekle (Fallback)
 app.post('/api/admin/add-photo', (req, res) => {
   const { title, url } = req.body;
 
@@ -148,7 +195,7 @@ app.post('/api/admin/add-photo', (req, res) => {
   });
 });
 
-// ⚙️ UYGULAMA DURUMUNU GÜNCELLE
+// Uygulama durumunu güncelle (Fallback)
 app.post('/api/admin/app-status', (req, res) => {
   const { status, maintenanceMessage } = req.body;
 
@@ -162,9 +209,22 @@ app.post('/api/admin/app-status', (req, res) => {
   });
 });
 
-// 📱 MOBİL UYGULAMA İÇİN API'LER
+// Bildirimleri listele (Fallback)
+app.get('/api/admin/notifications', (req, res) => {
+  res.json(database.notifications.slice(0, 20));
+});
 
-// Uygulama durumunu getir
+// Güncelleme notlarını listele (Fallback)
+app.get('/api/admin/updates', (req, res) => {
+  res.json(database.updateNotes.slice(0, 20));
+});
+
+// Nostalji fotoğraflarını listele (Fallback)
+app.get('/api/admin/photos', (req, res) => {
+  res.json(database.nostaljiPhotos.slice(0, 20));
+});
+
+// MOBILE APP ROUTES
 app.get('/api/app-status', (req, res) => {
   res.json({
     status: database.appSettings.app_status,
@@ -173,64 +233,66 @@ app.get('/api/app-status', (req, res) => {
   });
 });
 
-// Güncelleme notlarını getir
 app.get('/api/guncelleme-notlari', (req, res) => {
   res.json(database.updateNotes.slice(0, 10));
 });
 
-// Nostalji fotoğraflarını getir
 app.get('/api/nostalji-fotograflar', (req, res) => {
   res.json(database.nostaljiPhotos);
 });
 
+app.post('/api/stats', (req, res) => {
+  const { userId, action } = req.body;
+  console.log(`📊 İstatistik: ${userId} - ${action}`);
+  res.json({ success: true });
+});
+
 // Kullanıcı kaydı
 app.post('/api/notifications/register', (req, res) => {
-  const { userId, token, appVersion, platform } = req.body;
+  const { userId, token, appVersion, platform, username } = req.body;
+
+  console.log('📱 Kullanıcı kaydı:', { userId, token, username });
 
   // Kullanıcıyı kaydet veya güncelle
   const existingUser = database.users.find(u => u.id === userId);
   if (existingUser) {
     existingUser.lastActive = new Date().toISOString();
     existingUser.pushToken = token;
+    existingUser.platform = platform;
+    existingUser.appVersion = appVersion;
+    if (username) existingUser.username = username;
+
+    console.log('✅ Mevcut kullanıcı güncellendi:', existingUser.username);
   } else {
-    database.users.push({
+    const newUser = {
       id: userId,
-      username: 'Kullanıcı-' + Date.now(),
+      username: username || 'Kullanıcı-' + Date.now(),
       pushToken: token,
       platform: platform,
       appVersion: appVersion,
       lastActive: new Date().toISOString(),
-      createdAt: new Date().toISOString()
-    });
+      createdAt: new Date().toISOString(),
+      isPremium: false
+    };
+
+    database.users.push(newUser);
+    console.log('✅ Yeni kullanıcı eklendi:', newUser.username);
   }
 
-  res.json({ success: true });
-});
-
-// İstatistik gönder
-app.post('/api/stats', (req, res) => {
-  const { userId, action } = req.body;
-
-  console.log(`📊 İstatistik: ${userId} - ${action}`);
-  res.json({ success: true });
-});
-
-// Bildirimleri getir
-app.get('/api/admin/notifications', (req, res) => {
-  res.json(database.notifications.slice(0, 20));
-});
-
-// Ana sayfa
-app.get('/', (req, res) => {
   res.json({
-    message: 'Knight Rehber API Çalışıyor 🏰',
-    version: '1.0.0',
-    endpoints: {
-      admin: '/admin',
-      api: '/api'
-    }
+    success: true,
+    message: 'Kullanıcı başarıyla kaydedildi',
+    totalUsers: database.users.length
   });
 });
 
-// Vercel için export
+// Kullanıcı listesi
+app.get('/api/admin/users', (req, res) => {
+  res.json({
+    users: database.users,
+    total: database.users.length,
+    withPushToken: database.users.filter(u => u.pushToken).length
+  });
+});
+
 module.exports = app;
