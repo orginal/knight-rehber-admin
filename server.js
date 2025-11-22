@@ -3,6 +3,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,6 +11,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static('.'));
 
 // PostgreSQL bağlantısı
 const pool = new Pool({
@@ -359,7 +361,7 @@ app.get('/', (req, res) => {
 
 // Admin paneli
 app.get('/admin', (req, res) => {
-  res.sendFile(__dirname + '/admin.html');
+  res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
 // Health check
@@ -450,3 +452,5 @@ app.listen(PORT, async () => {
 
   await initializeDatabase();
 });
+
+module.exports = app;
