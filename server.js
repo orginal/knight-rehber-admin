@@ -249,6 +249,21 @@ app.post('/api/admin/version-settings', authenticateToken, async (req, res) => {
   }
 });
 
+// Kullanıcı listesi
+app.get('/api/admin/users', authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM user_tokens ORDER BY created_at DESC');
+    res.json({
+      users: result.rows,
+      total: result.rows.length,
+      withPushToken: result.rows.filter(u => u.token).length
+    });
+  } catch (error) {
+    console.error('Kullanıcı listeleme hatası', error);
+    res.json({ users: [], total: 0, withPushToken: 0 });
+  }
+});
+
 // MOBILE APP ROUTES
 
 // Güncelleme notlarını getir
@@ -298,8 +313,8 @@ app.get('/api/nostalji-fotograflar', async (req, res) => {
 // Push notification kaydı
 app.post('/api/notifications/register', async (req, res) => {
   try {
-    const { userId, token, appVersion } = req.body;
-    console.log('Push token kaydediliyor', userId);
+    const { userId, token, appVersion, username } = req.body;
+    console.log('Push token kaydediliyor', userId, username);
 
     await pool.query(
       `INSERT INTO user_tokens (user_id, token, app_version, created_at) 
@@ -361,6 +376,10 @@ app.get('/', (req, res) => {
 
 // Admin paneli
 app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+app.get('/admin.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
@@ -447,6 +466,7 @@ async function initializeDatabase() {
 app.listen(PORT, async () => {
   console.log(`🚀 Knight Rehber API http://localhost:${PORT} portunda çalışıyor`);
   console.log(`📊 Admin Panel: http://localhost:${PORT}/admin`);
+  console.log(`📋 Admin Panel (HTML): http://localhost:${PORT}/admin.html`);
   console.log(`❤️  Health Check: http://localhost:${PORT}/health`);
   console.log(`🔑 Admin Giriş: Aga / 2312631`);
 
