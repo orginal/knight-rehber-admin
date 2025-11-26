@@ -24,10 +24,10 @@
   "dependencies": {
     "express": "^4.17.1",
     "cors": "^2.8.5",
-    "mongoose": "^6.0.12",  
+    "mongoose": "^6.0.12",  // Düzeltilmiş, tek virgül
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3"         // Son eleman olduğu için virgülsüz
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
