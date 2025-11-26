@@ -24,7 +24,7 @@
   "dependencies": {
     "express": "^4.17.1",
     "cors": "^2.8.5",
-    "mongoose": "^6.0.12",   <-- Eksik olan VİRGÜL (,) buraya eklendi.
+    "mongoose": "^6.0.12",   <-- BURAYA VİRGÜL EKLENDİ!
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.3"
