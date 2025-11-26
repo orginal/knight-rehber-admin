@@ -1,48 +1,47 @@
 {
-  "name": "knight-rehber-api",
-  "version": "1.0.0",
-  "description": "Knight Rehber Backend API - Knight Online rehber uygulaması için backend servisleri",
-  "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "build": "echo 'No build step required'",
-    "test": "echo 'No tests specified'",
-    "vercel-build": "echo 'No build required for Vercel'"
-  },
-  "keywords": [
-    "knight-online",
-    "mobile-app",
-    "backend",
-    "api",
-    "notifications",
-    "gaming",
-    "rehber"
-  ],
-  "author": "Knight Rehber Team",
-  "license": "MIT",
-  "dependencies": {
-    "express": "^4.17.1",
-    "cors": "^2.8.5",
-    "mongoose": "^6.0.12"
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "pg": "^8.11.3"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
-  },
-  "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=8.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/your-username/knight-rehber-api"
-  },
-  "bugs": {
-    "url": "https://github.com/your-username/knight-rehber-api/issues"
-  },
-  "homepage": "https://knight-rehber-admin.vercel.app"
-
+  "name": "knight-rehber-api",
+  "version": "1.0.0",
+  "description": "Knight Rehber Backend API - Knight Online rehber uygulaması için backend servisleri",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "echo 'No build step required'",
+    "test": "echo 'No tests specified'",
+    "vercel-build": "echo 'No build required for Vercel'"
+  },
+  "keywords": [
+    "knight-online",
+    "mobile-app",
+    "backend",
+    "api",
+    "notifications",
+    "gaming",
+    "rehber"
+  ],
+  "author": "Knight Rehber Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.17.1",
+    "cors": "^2.8.5",
+    "mongoose": "^6.0.12",   <-- Eksik olan VİRGÜL (,) buraya eklendi.
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/knight-rehber-api"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/knight-rehber-api/issues"
+  },
+  "homepage": "https://knight-rehber-admin.vercel.app"
 }
